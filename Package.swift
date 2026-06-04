@@ -8,10 +8,12 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .library(name: "CopyCore", targets: ["CopyCore"])
+        .library(name: "CopyCore", targets: ["CopyCore"]),
+        .executable(name: "CopyApp", targets: ["CopyApp"])
     ],
     targets: [
         .target(name: "CopyCore"),
+        .executableTarget(name: "CopyApp", dependencies: ["CopyCore"]),
         .testTarget(name: "CopyCoreTests", dependencies: ["CopyCore"])
     ]
 )
