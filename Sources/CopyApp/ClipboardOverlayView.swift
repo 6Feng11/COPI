@@ -1,4 +1,5 @@
 import CopyCore
+import AppKit
 import SwiftUI
 
 struct ClipboardOverlayView: View {
@@ -56,7 +57,7 @@ struct ClipboardOverlayView: View {
     private var currentClipboardCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("当前剪贴板", systemImage: currentItem == nil ? "clipboard" : iconName(for: currentItem!.type))
+                Text("当前剪贴板")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
@@ -68,14 +69,9 @@ struct ClipboardOverlayView: View {
             }
 
             if let currentItem {
-                Text(currentItem.preview)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                clipboardContentBlock(for: currentItem, isCurrent: true)
 
                 HStack(spacing: 8) {
-                    Text(typeLabel(for: currentItem.type))
                     if let sourceAppName = currentItem.sourceAppName {
                         Text(sourceAppName)
                     }
@@ -203,29 +199,13 @@ struct ClipboardOverlayView: View {
         Button {
             model.restore(item)
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: iconName(for: item.type))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.70))
-                    .frame(width: 26, height: 26)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.preview)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    Text(typeLabel(for: item.type))
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.48))
-                }
-
-                Spacer()
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.07))
-            )
+            clipboardContentBlock(for: item, isCurrent: false)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
+                )
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -235,6 +215,51 @@ struct ClipboardOverlayView: View {
             Button("删除", role: .destructive) {
                 model.delete(item)
             }
+        }
+    }
+
+    private func clipboardContentBlock(for item: ClipboardItem, isCurrent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(typeLabel(for: item.type))
+                .font(.system(size: isCurrent ? 14 : 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.58))
+
+            switch item.type {
+            case .text, .link:
+                Text(item.preview)
+                    .font(.system(size: isCurrent ? 22 : 14, weight: isCurrent ? .semibold : .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(isCurrent ? 3 : 2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            case .image:
+                imagePreview(for: item, isCurrent: isCurrent)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func imagePreview(for item: ClipboardItem, isCurrent: Bool) -> some View {
+        if let imagePath = item.imagePath,
+           let image = NSImage(contentsOfFile: imagePath) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(height: isCurrent ? 116 : 72)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        } else {
+            Text("图片缩略图")
+                .font(.system(size: isCurrent ? 18 : 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.52))
+                .frame(maxWidth: .infinity, minHeight: isCurrent ? 86 : 56, alignment: .center)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
         }
     }
 
@@ -252,17 +277,6 @@ struct ClipboardOverlayView: View {
                 .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
-    }
-
-    private func iconName(for type: ClipboardItemType) -> String {
-        switch type {
-        case .text:
-            return "text.alignleft"
-        case .link:
-            return "link"
-        case .image:
-            return "photo"
-        }
     }
 
     private func typeLabel(for type: ClipboardItemType) -> String {
