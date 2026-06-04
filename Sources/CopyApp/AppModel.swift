@@ -61,6 +61,10 @@ final class AppModel: ObservableObject {
         lastPasteboardChangeCount = pasteboardClient.changeCount
     }
 
+    func captureCurrentPasteboardNow() {
+        pollPasteboard(force: true)
+    }
+
     private func loadHistory() {
         let loadedItems = (try? repository.load()) ?? []
         historyStore = ClipboardHistoryStore(items: loadedItems, retentionLimit: 1000)
@@ -75,9 +79,9 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func pollPasteboard() {
+    private func pollPasteboard(force: Bool = false) {
         let currentChangeCount = pasteboardClient.changeCount
-        guard currentChangeCount != lastPasteboardChangeCount else {
+        guard force || currentChangeCount != lastPasteboardChangeCount else {
             return
         }
         lastPasteboardChangeCount = currentChangeCount
