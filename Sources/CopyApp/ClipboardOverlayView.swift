@@ -4,6 +4,8 @@ import SwiftUI
 
 struct ClipboardOverlayView: View {
     @ObservedObject var model: AppModel
+    let onSelectItem: (ClipboardItem) -> Void
+
     @State private var query = ""
     @State private var showSettings = false
     @State private var isSearchExpanded = false
@@ -152,9 +154,9 @@ struct ClipboardOverlayView: View {
 
     private func overlayRow(for item: ClipboardItem) -> some View {
         Button {
-            model.restore(item)
+            onSelectItem(item)
         } label: {
-            clipboardContentBlock(for: item, isCurrent: false)
+            clipboardContentBlock(for: item)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
@@ -165,7 +167,7 @@ struct ClipboardOverlayView: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button("复制回剪贴板") {
-                model.restore(item)
+                onSelectItem(item)
             }
             Button("删除", role: .destructive) {
                 model.delete(item)
@@ -173,7 +175,7 @@ struct ClipboardOverlayView: View {
         }
     }
 
-    private func clipboardContentBlock(for item: ClipboardItem, isCurrent: Bool) -> some View {
+    private func clipboardContentBlock(for item: ClipboardItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(typeLabel(for: item.type))

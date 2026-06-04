@@ -1,4 +1,6 @@
 import AppKit
+import CopyCore
+import QuartzCore
 import SwiftUI
 
 @MainActor
@@ -6,7 +8,10 @@ final class StatusBarPanelController: NSObject {
     private let model: AppModel
     private let statusItem: NSStatusItem
     private let panel: NSPanel
+    private let toastPresenter = CopyToastPresenter()
     private let panelSize = NSSize(width: 460, height: 560)
+    private var focusedInputContext = FocusedInputContext(application: nil, wasTextInputFocused: false)
+    private var isAnimatingPanelOut = false
 
     init(model: AppModel) {
         self.model = model
@@ -26,15 +31,17 @@ final class StatusBarPanelController: NSObject {
 
     @objc func togglePanel() {
         if panel.isVisible {
-            panel.orderOut(nil)
+            hidePanel(animated: true)
         } else {
             showPanel()
         }
     }
 
     func showPanel() {
+        focusedInputContext = FocusedInputDetector.capture()
         model.captureCurrentPasteboardNow()
         panel.setFrame(panelFrame(), display: true)
+        panel.alphaValue = 1
         panel.orderFrontRegardless()
         NSApplication.shared.activate()
     }
@@ -55,7 +62,69 @@ final class StatusBarPanelController: NSObject {
         panel.hasShadow = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.contentView = NSHostingView(rootView: ClipboardOverlayView(model: model))
+        panel.contentView = NSHostingView(
+            rootView: ClipboardOverlayView(model: model) { [weak self] item in
+                self?.selectClipboardItem(item)
+            }
+        )
+    }
+
+    private func selectClipboardItem(_ item: ClipboardItem) {
+        guard !isAnimatingPanelOut else {
+            return
+        }
+
+        model.restore(item)
+        let selectionAction = ClipboardSelectionPolicy.action(
+            wasTextInputFocusedWhenOpened: focusedInputContext.wasTextInputFocused
+        )
+        let toastFrame = panel.frame
+
+        hidePanel(animated: true) { [weak self] in
+            switch selectionAction {
+            case .pasteIntoFocusedInput:
+                PasteInjector.pasteIntoFocusedApp(self?.focusedInputContext.application)
+            case .copyOnly:
+                self?.toastPresenter.show(message: "已复制", near: toastFrame)
+            }
+        }
+    }
+
+    private func hidePanel(animated: Bool, completion: (@MainActor @Sendable () -> Void)? = nil) {
+        guard panel.isVisible else {
+            completion?()
+            return
+        }
+
+        guard animated else {
+            panel.orderOut(nil)
+            completion?()
+            return
+        }
+
+        isAnimatingPanelOut = true
+        let originalFrame = panel.frame
+        let targetFrame = originalFrame.offsetBy(dx: 0, dy: 34)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            panel.animator().alphaValue = 0
+            panel.animator().setFrame(targetFrame, display: true)
+        } completionHandler: { [weak self] in
+            Task { @MainActor in
+                guard let self else {
+                    completion?()
+                    return
+                }
+
+                self.panel.orderOut(nil)
+                self.panel.alphaValue = 1
+                self.panel.setFrame(originalFrame, display: false)
+                self.isAnimatingPanelOut = false
+                completion?()
+            }
+        }
     }
 
     private func panelFrame() -> NSRect {
