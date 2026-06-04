@@ -13,14 +13,9 @@ struct ClipboardOverlayView: View {
         model.search(query)
     }
 
-    private var currentItem: ClipboardItem? {
-        model.items.first
-    }
-
     var body: some View {
         VStack(spacing: 16) {
             headerBar
-            currentClipboardCard
             historyList
             controls
         }
@@ -52,46 +47,6 @@ struct ClipboardOverlayView: View {
 
             dynamicSearch
         }
-    }
-
-    private var currentClipboardCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("当前剪贴板")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                Spacer()
-                if model.isRecordingPaused {
-                    Text("已暂停")
-                        .font(.caption)
-                        .foregroundStyle(.yellow)
-                }
-            }
-
-            if let currentItem {
-                clipboardContentBlock(for: currentItem, isCurrent: true)
-
-                HStack(spacing: 8) {
-                    if let sourceAppName = currentItem.sourceAppName {
-                        Text(sourceAppName)
-                    }
-                    Text(currentItem.createdAt, style: .relative)
-                }
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.52))
-            } else {
-                Text("复制任意文字、链接或图片后会显示在这里")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.52))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.white.opacity(0.08))
-        )
     }
 
     private var dynamicSearch: some View {
@@ -220,31 +175,37 @@ struct ClipboardOverlayView: View {
 
     private func clipboardContentBlock(for item: ClipboardItem, isCurrent: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(typeLabel(for: item.type))
-                .font(.system(size: isCurrent ? 14 : 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.58))
+            HStack {
+                Text(typeLabel(for: item.type))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.58))
+                Spacer()
+                Text(ClipboardTimeFormatter.timeString(for: item.createdAt))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
 
             switch item.type {
             case .text, .link:
                 Text(item.preview)
-                    .font(.system(size: isCurrent ? 22 : 14, weight: isCurrent ? .semibold : .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white)
-                    .lineLimit(isCurrent ? 3 : 2)
+                    .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .image:
-                imagePreview(for: item, isCurrent: isCurrent)
+                imagePreview(for: item)
             }
         }
     }
 
     @ViewBuilder
-    private func imagePreview(for item: ClipboardItem, isCurrent: Bool) -> some View {
+    private func imagePreview(for item: ClipboardItem) -> some View {
         if let imagePath = item.imagePath,
            let image = NSImage(contentsOfFile: imagePath) {
             Image(nsImage: image)
                 .resizable()
                 .scaledToFill()
-                .frame(height: isCurrent ? 116 : 72)
+                .frame(height: 72)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
@@ -253,9 +214,9 @@ struct ClipboardOverlayView: View {
                 )
         } else {
             Text("图片缩略图")
-                .font(.system(size: isCurrent ? 18 : 14, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white.opacity(0.52))
-                .frame(maxWidth: .infinity, minHeight: isCurrent ? 86 : 56, alignment: .center)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .center)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.white.opacity(0.06))
