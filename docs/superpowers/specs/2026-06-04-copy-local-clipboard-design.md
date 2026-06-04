@@ -1,105 +1,106 @@
-# Copy Local Clipboard Tool Design
+# Copy 本地剪贴板工具设计
 
-## Product Positioning
+## 产品定位
 
-Copy is a lightweight Mac clipboard history utility. It records everything the user copies on the device, keeps all history local, and helps the user quickly find and reuse previously copied text, links, and images.
+Copy 是一款轻量级 Mac 剪贴板历史工具。它会记录用户在本机复制过的内容，并帮助用户快速找回和复用之前复制过的文字、链接、图片等信息。
 
-The first version is a pure local tool:
+第一版定位为纯本地工具：
 
-- No account system.
-- No cloud sync.
-- No upload or remote analysis.
-- No server dependency.
-- All clipboard data is stored on the user's Mac.
+- 不需要账号。
+- 不做云同步。
+- 不上传剪贴板内容。
+- 不做远程分析。
+- 不依赖服务器。
+- 所有剪贴板历史只保存在用户自己的 Mac 本地。
 
-## Target User
+## 目标用户
 
-The primary user is a Mac user who frequently switches between chat, browser, documents, design tools, and development tools, and wants to recover copied content without manually keeping notes.
+目标用户是高频使用 Mac 的用户。他们经常在聊天工具、浏览器、文档、设计工具、开发工具之间切换，需要随时找回之前复制过的内容。
 
-The tool should feel quiet and utilitarian. It should stay out of the way until the user needs clipboard history.
+产品气质应该安静、轻量、工具化。平时不打扰用户，只在用户需要找历史内容时出现。
 
-## MVP Scope
+## 第一版 MVP 范围
 
-The MVP should do five things well:
+第一版只需要把五件事做好：
 
-1. Record copied text, links, and images.
-2. Store all records locally.
-3. Open a compact history panel with a global shortcut.
-4. Search and preview clipboard history.
-5. Copy a selected history item back to the system clipboard.
+1. 自动记录用户复制过的文字、链接和图片。
+2. 所有记录都保存在用户本地。
+3. 通过全局快捷键打开一个紧凑的历史面板。
+4. 支持搜索和预览剪贴板历史。
+5. 选中历史记录后，可以一键重新复制到系统剪贴板。
 
-## Non-Goals For Version 1
+## 第一版不做的功能
 
-The first version will not include:
+为了保持产品简单，第一版不做：
 
-- iCloud sync.
-- Cross-device sync.
-- User accounts.
-- OCR for image text.
-- AI classification.
-- Shared clipboard history.
-- Team features.
-- Browser extensions.
-- Automatic sensitive-content filtering.
+- iCloud 同步。
+- 多设备同步。
+- 用户账号。
+- 图片 OCR 识别。
+- AI 自动分类。
+- 共享剪贴板历史。
+- 团队协作功能。
+- 浏览器插件。
+- 自动识别和过滤敏感内容。
 
-These are intentionally excluded so the product remains a reliable local utility first.
+这些能力都可以后续再考虑。第一版的重点是先做成一个稳定、可信、好用的本地剪贴板工具。
 
-## Core Interaction Model
+## 核心交互
 
-Copy runs as a menu bar app.
+Copy 以菜单栏应用的形式常驻。
 
-The menu bar menu includes:
+菜单栏入口包含：
 
-- Open Clipboard History.
-- Pause Recording.
-- Clear All History.
-- Settings.
-- Quit.
+- 打开剪贴板历史。
+- 暂停记录。
+- 清空全部历史。
+- 设置。
+- 退出。
 
-The user can also press a global shortcut to open the clipboard history panel. The recommended default shortcut is `Command + Shift + V`, with a setting to change it if there is a conflict.
+用户也可以通过全局快捷键打开剪贴板历史面板。建议默认快捷键为 `Command + Shift + V`，如果和用户已有快捷键冲突，可以在设置里修改。
 
-The history panel contains:
+历史面板包含：
 
-- A search field at the top.
-- A scrollable history list.
-- A preview area or inline preview depending on available space.
-- Keyboard support for moving through results and copying the selected item.
+- 顶部搜索框。
+- 中间历史列表。
+- 内容预览区域，或者在列表中直接做轻量预览。
+- 键盘操作支持，例如上下选择、回车复制。
 
-The primary flow is:
+主要使用流程：
 
-1. User copies content in any app.
-2. Copy detects the pasteboard change.
-3. Copy stores a normalized local record.
-4. User presses the global shortcut.
-5. User searches or navigates recent records.
-6. User presses Enter or clicks a record.
-7. Copy writes that item back to the system clipboard.
+1. 用户在任意应用中复制内容。
+2. Copy 检测到系统剪贴板变化。
+3. Copy 把内容标准化后保存为本地记录。
+4. 用户按全局快捷键打开历史面板。
+5. 用户搜索或浏览最近复制的内容。
+6. 用户点击某条记录，或者按回车选中。
+7. Copy 把该记录重新写回系统剪贴板。
 
-## Clipboard Content Types
+## 支持的剪贴板类型
 
-### Text
+### 文字
 
-Plain text should be stored directly in the local database. The list preview should show the first useful line and a short body excerpt.
+普通文字直接存入本地数据库。历史列表中展示第一行内容和简短摘要。
 
-### Links
+### 链接
 
-URLs should be detected from copied text. They should still be stored as text, but displayed with a link type indicator. Version 1 can use the URL itself as the title. Fetching web page titles is not required.
+链接本质上仍然按文字保存，但界面上要识别并显示为链接类型。第一版可以直接展示 URL 本身，不需要额外抓取网页标题。
 
-### Images
+### 图片
 
-Images should be stored as local files in the app support directory. The database should store metadata and file paths rather than binary image data.
+图片不建议直接存入数据库。推荐把图片文件保存到本地应用目录，数据库只保存图片路径、缩略图路径和基础元数据。
 
-The list should show a thumbnail preview and basic metadata such as image dimensions when available.
+历史列表中展示图片缩略图。如果能拿到尺寸信息，可以展示图片宽高。
 
-## Local Storage
+## 本地存储
 
-Recommended storage location:
+推荐存储位置：
 
 ```text
 ~/Library/Application Support/Copy/
 ```
 
-Recommended internal layout:
+推荐目录结构：
 
 ```text
 Copy/
@@ -109,9 +110,9 @@ Copy/
     thumbnails/
 ```
 
-The SQLite database stores structured metadata. Image files are stored separately.
+SQLite 用来保存结构化元数据，图片原图和缩略图单独以文件形式保存。
 
-Suggested record fields:
+建议的历史记录字段：
 
 ```text
 id
@@ -130,212 +131,213 @@ useCount
 isFavorite
 ```
 
-## Deduplication
+## 去重规则
 
-Copy should avoid storing repeated identical entries when the same content is copied multiple times in a short period.
+Copy 应该避免在短时间内重复保存完全相同的内容。
 
-Version 1 deduplication rule:
+第一版去重规则：
 
-- Generate a content hash from the normalized content.
-- If the newest record has the same hash, update its timestamp instead of inserting a duplicate.
-- If an older non-adjacent record has the same hash, update that existing record, move it to the top of the history list, and increment its use count instead of inserting a new duplicate.
+- 根据标准化后的内容生成 `contentHash`。
+- 如果最新一条记录和当前复制内容的 hash 相同，只更新时间，不新增重复记录。
+- 如果更早的历史记录和当前复制内容的 hash 相同，更新那条旧记录，把它移动到历史列表顶部，并增加使用次数，不插入新的重复记录。
 
-## Privacy And Trust Model
+## 隐私与信任边界
 
-Copy records all clipboard content by default because it is positioned as a pure local utility.
+Copy 默认记录所有剪贴板内容，因为它的产品定位是纯本地工具。
 
-Trust boundaries:
+信任边界：
 
-- Clipboard history remains on the user's Mac.
-- The app does not upload clipboard content.
-- The app does not require login.
-- The app does not send analytics containing clipboard content.
+- 剪贴板历史只保存在用户自己的 Mac。
+- 应用不上传剪贴板内容。
+- 应用不需要登录。
+- 应用不发送包含剪贴板内容的分析数据。
 
-User controls:
+用户控制能力：
 
-- Pause recording.
-- Delete one record.
-- Clear all history.
-- Limit retained history count.
-- Quit the app.
+- 暂停记录。
+- 删除单条记录。
+- 清空全部历史。
+- 限制历史保留数量。
+- 退出应用。
 
-Recommended settings:
+推荐设置项：
 
-- Retain latest 500 items.
-- Retain latest 1000 items.
-- Retain forever.
-- Clear image cache together with history.
+- 只保留最近 500 条。
+- 只保留最近 1000 条。
+- 永久保留。
+- 清空历史时同时删除图片缓存。
 
-## Settings
+## 设置项
 
-Version 1 settings should include:
+第一版设置包括：
 
-- Global shortcut.
-- Maximum history count.
-- Launch at login.
-- Pause recording state.
-- Clear all history.
+- 全局快捷键。
+- 最大历史保留数量。
+- 开机启动。
+- 暂停记录状态。
+- 清空全部历史。
 
-Advanced app exclusion rules can be added later, but are not required for the MVP.
+后续可以增加“不记录某些应用”的高级规则，但这不是 MVP 必需功能。
 
-## Architecture
+## 模块架构
 
 ### ClipboardMonitor
 
-Observes the macOS pasteboard change count and extracts supported content types.
+负责监听 macOS 系统剪贴板变化，并提取支持的内容类型。
 
-Responsibilities:
+职责：
 
-- Poll or observe pasteboard changes.
-- Ignore changes written by Copy itself when restoring history items.
-- Normalize detected content.
-- Send new items to the store.
+- 监听或轮询剪贴板变化计数。
+- 忽略 Copy 自己写回剪贴板产生的变化。
+- 标准化识别到的内容。
+- 把新内容交给存储层。
 
 ### ClipboardStore
 
-Persists and queries clipboard history.
+负责保存和查询剪贴板历史。
 
-Responsibilities:
+职责：
 
-- Insert or update records.
-- Manage deduplication.
-- Search records.
-- Delete records.
-- Enforce retention limits.
+- 插入或更新历史记录。
+- 管理去重逻辑。
+- 搜索历史记录。
+- 删除历史记录。
+- 执行历史数量保留限制。
 
 ### ImageStore
 
-Stores image originals and thumbnails on disk.
+负责把图片原图和缩略图保存到本地磁盘。
 
-Responsibilities:
+职责：
 
-- Save copied images.
-- Generate thumbnails.
-- Delete image files when records are deleted.
-- Keep database paths and files consistent.
+- 保存复制得到的图片。
+- 生成缩略图。
+- 删除历史记录时同步删除图片文件。
+- 保持数据库路径和磁盘文件一致。
 
 ### HistoryPanel
 
-Provides the main user interface for searching and reusing clipboard items.
+负责剪贴板历史主界面。
 
-Responsibilities:
+职责：
 
-- Show recent records.
-- Search text and link records.
-- Show image thumbnails.
-- Support keyboard navigation.
-- Restore selected record to the pasteboard.
+- 展示最近复制记录。
+- 搜索文字和链接记录。
+- 展示图片缩略图。
+- 支持键盘导航。
+- 把选中的历史记录恢复到系统剪贴板。
 
 ### MenuBarController
 
-Owns menu bar interactions.
+负责菜单栏入口和菜单操作。
 
-Responsibilities:
+职责：
 
-- Show app status.
-- Open the history panel.
-- Pause or resume recording.
-- Clear all history.
-- Quit the app.
+- 展示应用状态。
+- 打开历史面板。
+- 暂停或恢复记录。
+- 清空全部历史。
+- 退出应用。
 
 ### PasteboardWriter
 
-Writes selected history items back to the system clipboard.
+负责把历史内容重新写回系统剪贴板。
 
-Responsibilities:
+职责：
 
-- Restore text, links, and images with the right pasteboard types.
-- Mark self-originated pasteboard changes so ClipboardMonitor does not immediately duplicate them.
+- 按正确的剪贴板类型恢复文字、链接和图片。
+- 标记由 Copy 自己产生的剪贴板写入，避免监听器立刻生成重复记录。
 
-## Error Handling
+## 异常处理
 
-Clipboard read failures should fail silently and avoid interrupting the user.
+读取剪贴板失败时，不要打扰用户，静默跳过即可。
 
-Storage failures should be visible only when they affect core behavior. For example, if the database cannot be opened, the app should show a simple error and avoid pretending history is being saved.
+如果本地数据库无法打开，应用应该给出明确错误提示，不能假装正在正常保存历史。
 
-Image write failures should still allow text and link history to continue working.
+图片写入失败时，不应影响文字和链接记录继续工作。
 
-When clearing history, the app should delete both database records and image files.
+清空历史时，需要同时删除数据库记录和本地图片文件。
 
-## Testing Strategy
+## 测试策略
 
-Unit tests:
+单元测试：
 
-- Text normalization.
-- URL detection.
-- Content hashing.
-- Deduplication behavior.
-- Retention limit behavior.
+- 文字标准化。
+- URL 识别。
+- 内容 hash 生成。
+- 去重逻辑。
+- 历史数量保留规则。
 
-Integration tests:
+集成测试：
 
-- Insert and query text records.
-- Insert image metadata and delete associated files.
-- Restore text to the pasteboard.
-- Confirm self-originated pasteboard writes do not create duplicate records.
+- 插入和查询文字记录。
+- 插入图片元数据，并删除关联图片文件。
+- 将文字恢复到系统剪贴板。
+- 确认 Copy 自己写回剪贴板时不会生成重复记录。
 
-Manual QA:
+手动 QA：
 
-- Copy text from Notes, browser, chat, and code editor.
-- Copy links from browser address bar and page content.
-- Copy images from browser and Finder.
-- Open history with global shortcut.
-- Search history.
-- Restore records and paste into another app.
-- Pause recording and verify new copies are not recorded.
-- Clear history and verify image files are removed.
+- 从备忘录、浏览器、聊天工具、代码编辑器复制文字。
+- 从浏览器地址栏和网页正文复制链接。
+- 从浏览器和 Finder 复制图片。
+- 使用全局快捷键打开历史面板。
+- 搜索历史记录。
+- 恢复历史记录并粘贴到其他应用。
+- 暂停记录后确认新复制内容不会被记录。
+- 清空历史后确认图片文件也被删除。
 
-## Initial Milestones
+## 初始开发里程碑
 
-### Milestone 1: Local Text Clipboard History
+### 里程碑 1：本地文字剪贴板历史
 
-- Menu bar app shell.
-- Pasteboard monitor.
-- Local SQLite store.
-- Text record capture.
-- Basic history panel.
-- Restore text to pasteboard.
+- 菜单栏应用外壳。
+- 剪贴板监听器。
+- 本地 SQLite 存储。
+- 文字记录捕获。
+- 基础历史面板。
+- 恢复文字到系统剪贴板。
 
-### Milestone 2: Links And Search
+### 里程碑 2：链接识别与搜索
 
-- URL detection.
-- Search field.
-- Better record previews.
-- Keyboard navigation.
-- Deduplication.
+- URL 识别。
+- 搜索框。
+- 更好的记录摘要。
+- 键盘导航。
+- 去重逻辑。
 
-### Milestone 3: Image History
+### 里程碑 3：图片历史
 
-- Image extraction.
-- Local image file storage.
-- Thumbnail generation.
-- Image list preview.
-- Restore image to pasteboard.
+- 图片提取。
+- 图片本地文件存储。
+- 缩略图生成。
+- 图片列表预览。
+- 恢复图片到系统剪贴板。
 
-### Milestone 4: Settings And Controls
+### 里程碑 4：设置与控制
 
-- Global shortcut customization.
-- Launch at login.
-- Pause recording.
-- Delete single record.
-- Clear all history.
-- History retention limit.
+- 自定义全局快捷键。
+- 开机启动。
+- 暂停记录。
+- 删除单条记录。
+- 清空全部历史。
+- 历史数量限制。
 
-## Recommended First Implementation Stack
+## 推荐技术栈
 
-- Swift.
-- SwiftUI.
-- AppKit for menu bar, pasteboard, and global shortcut behavior where needed.
-- SQLite for metadata.
-- Local file storage for images.
+- Swift。
+- SwiftUI。
+- AppKit，用于菜单栏、系统剪贴板和全局快捷键等能力。
+- SQLite，用于保存历史元数据。
+- 本地文件系统，用于保存图片。
 
-This stack gives the app a native Mac feel and avoids unnecessary runtime dependencies.
+这套技术栈能保证应用有原生 Mac 体验，同时避免引入不必要的运行时依赖。
 
-## Open Product Decisions
+## 后续产品决策
 
-The following decisions can wait until implementation planning:
+以下决策可以留到实现计划阶段再定：
 
-- Exact app name and icon.
-- Exact default shortcut if `Command + Shift + V` conflicts.
-- Whether the history panel should be a floating panel, popover, or small window.
-- Whether favorites are included in Version 1 or reserved for Version 2.
+- 应用最终名称和图标。
+- 如果 `Command + Shift + V` 冲突，默认快捷键改成什么。
+- 历史面板采用浮层、弹窗还是小窗口。
+- 收藏功能是否进入第一版，还是放到第二版。
+
