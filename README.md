@@ -28,17 +28,27 @@ Copy 是一款 Mac 本地剪贴板历史工具。第一版以菜单栏应用形�
 
 ## 运行
 
+推荐先打包成 Mac 应用：
+
 ```bash
-swift run CopyApp
+scripts/build-app-bundle.sh
+open .build/app/Copy.app
 ```
 
 运行后，点击系统菜单栏里的 Copy 图标打开菜单，再选择“打开剪贴板历史”。
+
+开发调试时也可以直接运行 SwiftPM 可执行目标：
+
+```bash
+swift run CopyApp
+```
 
 ## 验证
 
 ```bash
 swift test
 swift build
+scripts/verify-app-bundle.sh
 ```
 
 ## 后续改进
@@ -48,4 +58,3 @@ swift build
 - 为图片生成和展示真实缩略图。
 - 增加开机启动。
 - 增加历史保留数量设置。
-
