@@ -234,15 +234,21 @@ struct ClipboardOverlayView: View {
     private func imagePreview(for item: ClipboardItem) -> some View {
         if let imagePath = item.imagePath,
            let image = NSImage(contentsOfFile: imagePath) {
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(height: 72)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.06))
+
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(6)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 96)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 )
         } else {
             Text("图片缩略图")
