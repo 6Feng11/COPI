@@ -5,14 +5,8 @@ struct ClipboardOverlayView: View {
     @ObservedObject var model: AppModel
     @State private var query = ""
     @State private var showSettings = false
-
-    private var selectedWeekday: Int {
-        WeekdayCalendar.currentWeekdayNumber()
-    }
-
-    private var days: [WeekdayCalendarDay] {
-        WeekdayCalendar.days(selectedWeekday: selectedWeekday)
-    }
+    @State private var isSearchExpanded = false
+    @FocusState private var isSearchFocused: Bool
 
     private var results: [ClipboardItem] {
         model.search(query)
@@ -24,9 +18,8 @@ struct ClipboardOverlayView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            weekdayBar
+            headerBar
             currentClipboardCard
-            searchField
             historyList
             controls
         }
@@ -43,18 +36,20 @@ struct ClipboardOverlayView: View {
         .preferredColorScheme(.dark)
     }
 
-    private var weekdayBar: some View {
-        HStack(spacing: 8) {
-            ForEach(days, id: \.number) { day in
-                Text("\(day.number)")
-                    .font(.system(size: 13, weight: day.isSelected ? .bold : .medium))
-                    .foregroundStyle(day.isSelected ? Color.black : Color.white.opacity(0.72))
-                    .frame(width: 42, height: 34)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(day.isSelected ? Color.white : Color.white.opacity(0.10))
-                    )
+    private var headerBar: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(DateHeader.title())
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("剪贴板")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.46))
             }
+
+            Spacer(minLength: 10)
+
+            dynamicSearch
         }
     }
 
@@ -103,20 +98,61 @@ struct ClipboardOverlayView: View {
         )
     }
 
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.white.opacity(0.50))
-            TextField("搜索历史", text: $query)
-                .textFieldStyle(.plain)
-                .foregroundStyle(.white)
+    private var dynamicSearch: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                    isSearchExpanded = true
+                    isSearchFocused = true
+                }
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.76))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+
+            if isSearchExpanded {
+                TextField("搜索", text: $query)
+                    .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
+                    .foregroundStyle(.white)
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 112)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+
+                if !query.isEmpty {
+                    Button {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                            query = ""
+                            isSearchFocused = true
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.white.opacity(0.42))
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                }
+            }
         }
-        .padding(.horizontal, 14)
+        .padding(.leading, isSearchExpanded ? 2 : 0)
+        .padding(.trailing, isSearchExpanded ? 12 : 0)
         .frame(height: 40)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.10))
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(isSearchExpanded ? 0.12 : 0.09))
         )
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isSearchExpanded)
+        .onChange(of: isSearchFocused) { _, focused in
+            guard !focused, query.isEmpty else {
+                return
+            }
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                isSearchExpanded = false
+            }
+        }
     }
 
     private var historyList: some View {
