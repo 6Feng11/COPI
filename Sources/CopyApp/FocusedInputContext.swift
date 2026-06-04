@@ -13,7 +13,7 @@ enum FocusedInputDetector {
     static func capture() -> FocusedInputContext {
         let application = NSWorkspace.shared.frontmostApplication
         let isTrusted = accessibilityIsTrusted()
-        guard isTrusted, let focusedElement = focusedElement() else {
+        guard isTrusted, let focusedElement = focusedElement(for: application) else {
             return FocusedInputContext(
                 application: application,
                 focusedElement: nil,
@@ -97,11 +97,19 @@ enum FocusedInputDetector {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    private static func focusedElement() -> AXUIElement? {
-        let systemWide = AXUIElementCreateSystemWide()
+    private static func focusedElement(for application: NSRunningApplication?) -> AXUIElement? {
+        if let application,
+           let focusedElement = focusedElement(in: AXUIElementCreateApplication(application.processIdentifier)) {
+            return focusedElement
+        }
+
+        return focusedElement(in: AXUIElementCreateSystemWide())
+    }
+
+    private static func focusedElement(in element: AXUIElement) -> AXUIElement? {
         var focusedValue: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(
-            systemWide,
+            element,
             kAXFocusedUIElementAttribute as CFString,
             &focusedValue
         )
