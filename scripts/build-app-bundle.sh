@@ -7,6 +7,7 @@ APP_NAME="Copy"
 EXECUTABLE_NAME="CopyApp"
 PRODUCT_NAME="CopyApp"
 APP_DIR="$ROOT_DIR/.build/app/$APP_NAME.app"
+CODE_SIGN_IDENTITY="${COPY_CODE_SIGN_IDENTITY:-}"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -56,6 +57,15 @@ cat > "$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP_DIR" >/dev/null
+if [[ -z "$CODE_SIGN_IDENTITY" ]]; then
+  CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+    | awk -F'"' '/Apple Development:/ { print $2; exit }')"
+fi
+
+if [[ -z "$CODE_SIGN_IDENTITY" ]]; then
+  CODE_SIGN_IDENTITY="-"
+fi
+
+codesign --force --deep --sign "$CODE_SIGN_IDENTITY" "$APP_DIR" >/dev/null
 
 echo "$APP_DIR"
