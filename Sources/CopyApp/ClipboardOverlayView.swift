@@ -181,6 +181,7 @@ struct ClipboardOverlayView: View {
     private func clipboardContentBlock(for item: ClipboardItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
+                sourceAppIcon(for: item)
                 Text(typeLabel(for: item.type))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.58))
@@ -201,6 +202,32 @@ struct ClipboardOverlayView: View {
                 imagePreview(for: item)
             }
         }
+    }
+
+    @ViewBuilder
+    private func sourceAppIcon(for item: ClipboardItem) -> some View {
+        if let image = sourceAppImage(for: item) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 14, height: 14)
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+        } else {
+            Image(systemName: "app")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.42))
+                .frame(width: 14, height: 14)
+        }
+    }
+
+    private func sourceAppImage(for item: ClipboardItem) -> NSImage? {
+        guard let bundleId = item.sourceAppBundleId,
+              let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+        else {
+            return nil
+        }
+
+        return NSWorkspace.shared.icon(forFile: appURL.path)
     }
 
     @ViewBuilder

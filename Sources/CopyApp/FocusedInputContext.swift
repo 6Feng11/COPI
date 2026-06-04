@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import CopyCore
 
 struct FocusedInputContext: @unchecked Sendable {
     let application: NSRunningApplication?
@@ -47,6 +48,48 @@ enum FocusedInputDetector {
             kAXFocusedAttribute as CFString,
             kCFBooleanTrue
         )
+    }
+
+    static func insertText(_ text: String, into context: FocusedInputContext) -> Bool {
+        guard context.isAccessibilityTrusted,
+              context.wasTextInputFocused,
+              let focusedElement = context.focusedElement
+        else {
+            return false
+        }
+
+        restoreFocus(context)
+
+        if AXUIElementSetAttributeValue(
+            focusedElement,
+            kAXSelectedTextAttribute as CFString,
+            text as CFString
+        ) == .success {
+            return true
+        }
+
+        guard let value = stringAttribute(kAXValueAttribute, from: focusedElement),
+              let selectedRange = selectedTextRange(from: focusedElement),
+              let insertion = TextInsertion.replacingSelection(
+                in: value,
+                selectedRange: selectedRange,
+                with: text
+              )
+        else {
+            return false
+        }
+
+        let valueResult = AXUIElementSetAttributeValue(
+            focusedElement,
+            kAXValueAttribute as CFString,
+            insertion.text as CFString
+        )
+        guard valueResult == .success else {
+            return false
+        }
+
+        setSelectedTextRange(insertion.selectedRange, on: focusedElement)
+        return true
     }
 
     private static func accessibilityIsTrusted() -> Bool {
@@ -101,5 +144,37 @@ enum FocusedInputDetector {
         }
 
         return value as? String
+    }
+
+    private static func selectedTextRange(from element: AXUIElement) -> NSRange? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &value
+        )
+        guard result == .success, let value else {
+            return nil
+        }
+
+        var range = CFRange(location: 0, length: 0)
+        guard AXValueGetValue(value as! AXValue, .cfRange, &range) else {
+            return nil
+        }
+
+        return NSRange(location: range.location, length: range.length)
+    }
+
+    private static func setSelectedTextRange(_ range: NSRange, on element: AXUIElement) {
+        var cfRange = CFRange(location: range.location, length: range.length)
+        guard let value = AXValueCreate(.cfRange, &cfRange) else {
+            return
+        }
+
+        AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            value
+        )
     }
 }

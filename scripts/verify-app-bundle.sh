@@ -19,5 +19,6 @@ test -x "$EXECUTABLE"
 /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$INFO_PLIST" | grep -qx "com.local.copy"
 /usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$INFO_PLIST" | grep -qx "CopyApp"
 /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$INFO_PLIST" | grep -qx "true"
+codesign -dv "$APP_PATH" 2>&1 | grep -qx "Identifier=com.local.copy"
 
 echo "Copy.app bundle 验证通过：$APP_PATH"

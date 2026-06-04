@@ -23,7 +23,7 @@ final class StatusBarPanelController: NSObject {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.panel = FloatingClipboardPanel(
             contentRect: NSRect(origin: .zero, size: panelSize),
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -48,7 +48,6 @@ final class StatusBarPanelController: NSObject {
         panel.setFrame(panelFrame(), display: true)
         panel.alphaValue = 1
         panel.orderFrontRegardless()
-        NSApplication.shared.activate()
     }
 
     private func configureStatusItem() {
@@ -65,6 +64,8 @@ final class StatusBarPanelController: NSObject {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
+        panel.hidesOnDeactivate = false
+        panel.becomesKeyOnlyIfNeeded = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(
@@ -89,7 +90,7 @@ final class StatusBarPanelController: NSObject {
             switch selectionAction {
             case .pasteIntoFocusedInput:
                 if let focusedInputContext = self?.focusedInputContext {
-                    PasteInjector.pasteIntoFocusedContext(focusedInputContext)
+                    PasteInjector.paste(item, into: focusedInputContext)
                 }
             case .copyOnly:
                 let message = self?.focusedInputContext.isAccessibilityTrusted == false
