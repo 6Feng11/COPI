@@ -1,15 +1,19 @@
 import AppKit
 
 enum PasteInjector {
-    static func pasteIntoFocusedApp(_ application: NSRunningApplication?) {
+    static func pasteIntoFocusedContext(_ context: FocusedInputContext) {
         if #available(macOS 14.0, *) {
-            application?.activate()
+            context.application?.activate()
         } else {
-            application?.activate(options: [.activateIgnoringOtherApps])
+            context.application?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-            sendCommandV()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            FocusedInputDetector.restoreFocus(context)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                sendCommandV()
+            }
         }
     }
 

@@ -10,7 +10,12 @@ final class StatusBarPanelController: NSObject {
     private let panel: NSPanel
     private let toastPresenter = CopyToastPresenter()
     private let panelSize = NSSize(width: 460, height: 560)
-    private var focusedInputContext = FocusedInputContext(application: nil, wasTextInputFocused: false)
+    private var focusedInputContext = FocusedInputContext(
+        application: nil,
+        focusedElement: nil,
+        wasTextInputFocused: false,
+        isAccessibilityTrusted: false
+    )
     private var isAnimatingPanelOut = false
 
     init(model: AppModel) {
@@ -83,9 +88,14 @@ final class StatusBarPanelController: NSObject {
         hidePanel(animated: true) { [weak self] in
             switch selectionAction {
             case .pasteIntoFocusedInput:
-                PasteInjector.pasteIntoFocusedApp(self?.focusedInputContext.application)
+                if let focusedInputContext = self?.focusedInputContext {
+                    PasteInjector.pasteIntoFocusedContext(focusedInputContext)
+                }
             case .copyOnly:
-                self?.toastPresenter.show(message: "已复制", near: toastFrame)
+                let message = self?.focusedInputContext.isAccessibilityTrusted == false
+                    ? "已复制，需开启辅助功能"
+                    : "已复制"
+                self?.toastPresenter.show(message: message, near: toastFrame)
             }
         }
     }

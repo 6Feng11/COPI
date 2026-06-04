@@ -8,7 +8,7 @@ final class CopyToastPresenter {
     func show(message: String, near frame: NSRect) {
         toastPanel?.orderOut(nil)
 
-        let size = NSSize(width: 118, height: 42)
+        let size = NSSize(width: message.count > 3 ? 210 : 118, height: 42)
         let origin = NSPoint(
             x: frame.midX - size.width / 2,
             y: frame.maxY - size.height - 16

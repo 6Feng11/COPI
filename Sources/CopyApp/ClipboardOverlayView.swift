@@ -153,18 +153,21 @@ struct ClipboardOverlayView: View {
     }
 
     private func overlayRow(for item: ClipboardItem) -> some View {
-        Button {
+        let cardShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
+        return Button {
             onSelectItem(item)
         } label: {
             clipboardContentBlock(for: item)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(cardShape)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(0.07))
+                    cardShape.fill(Color.white.opacity(0.07))
                 )
         }
         .buttonStyle(.plain)
+        .contentShape(cardShape)
         .contextMenu {
             Button("复制回剪贴板") {
                 onSelectItem(item)
