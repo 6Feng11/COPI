@@ -10,9 +10,9 @@ struct FocusedInputContext: @unchecked Sendable {
 }
 
 enum FocusedInputDetector {
-    static func capture() -> FocusedInputContext {
+    static func capture(promptForAccessibility: Bool = true) -> FocusedInputContext {
         let application = NSWorkspace.shared.frontmostApplication
-        let isTrusted = accessibilityIsTrusted()
+        let isTrusted = accessibilityIsTrusted(prompt: promptForAccessibility)
         guard isTrusted, let focusedElement = focusedElement(for: application) else {
             return FocusedInputContext(
                 application: application,
@@ -28,6 +28,10 @@ enum FocusedInputDetector {
             wasTextInputFocused: isTextInput(focusedElement),
             isAccessibilityTrusted: isTrusted
         )
+    }
+
+    static func isCurrentApplication(_ context: FocusedInputContext) -> Bool {
+        context.application?.processIdentifier == NSRunningApplication.current.processIdentifier
     }
 
     static func restoreFocus(_ context: FocusedInputContext) {
@@ -92,8 +96,8 @@ enum FocusedInputDetector {
         return true
     }
 
-    private static func accessibilityIsTrusted() -> Bool {
-        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+    private static func accessibilityIsTrusted(prompt: Bool) -> Bool {
+        let options = ["AXTrustedCheckOptionPrompt": prompt] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
     }
 

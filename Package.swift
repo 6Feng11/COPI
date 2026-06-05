@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Copy",
+    name: "COPI",
     platforms: [
         .macOS(.v14)
     ],

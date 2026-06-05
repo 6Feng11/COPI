@@ -66,9 +66,38 @@ final class AppModel: ObservableObject {
     }
 
     private func loadHistory() {
-        let loadedItems = (try? repository.load()) ?? []
+        var loadedItems = (try? repository.load()) ?? []
+        if backfillMissingImageThumbnails(in: &loadedItems) {
+            try? repository.save(loadedItems)
+        }
         historyStore = ClipboardHistoryStore(items: loadedItems, retentionLimit: 1000)
         items = historyStore.items
+    }
+
+    private func backfillMissingImageThumbnails(in items: inout [ClipboardItem]) -> Bool {
+        var didChange = false
+
+        for index in items.indices {
+            guard ClipboardImagePreviewSource.needsThumbnailBackfill(for: items[index]),
+                  let imagePath = items[index].imagePath,
+                  let imageData = try? Data(contentsOf: URL(fileURLWithPath: imagePath))
+            else {
+                continue
+            }
+
+            let thumbnailURL = imageStore.thumbnailURL(for: items[index].id, fileExtension: "jpg")
+            guard let writtenThumbnailURL = try? ImageThumbnailWriter.writeThumbnail(
+                from: imageData,
+                to: thumbnailURL
+            ) else {
+                continue
+            }
+
+            items[index].thumbnailPath = writtenThumbnailURL.path
+            didChange = true
+        }
+
+        return didChange
     }
 
     private func startMonitoring() {
@@ -132,18 +161,82 @@ final class AppModel: ObservableObject {
             id: id,
             fileExtension: "tiff"
         )
+        let thumbnailURL = try? ImageThumbnailWriter.writeThumbnail(
+            from: data,
+            to: imageStore.thumbnailURL(for: id, fileExtension: "jpg")
+        )
 
         let item = ClipboardItem(
             id: id,
             type: .image,
             preview: "图片",
             imagePath: originalURL?.path,
-            thumbnailPath: imageStore.thumbnailURL(for: id, fileExtension: "tiff").path,
+            thumbnailPath: thumbnailURL?.path,
             sourceAppBundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
             sourceAppName: NSWorkspace.shared.frontmostApplication?.localizedName,
             contentHash: hash,
             createdAt: Date()
         )
         record(item)
+    }
+}
+
+private enum ImageThumbnailWriter {
+    static func writeThumbnail(
+        from data: Data,
+        to outputURL: URL,
+        maxPixelWidth: CGFloat = 640,
+        maxPixelHeight: CGFloat = 3_200,
+        compressionFactor: CGFloat = 0.74
+    ) throws -> URL? {
+        guard let image = NSImage(data: data),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else {
+            return nil
+        }
+
+        let sourceWidth = CGFloat(cgImage.width)
+        let sourceHeight = CGFloat(cgImage.height)
+        guard sourceWidth > 0, sourceHeight > 0 else {
+            return nil
+        }
+
+        let scale = min(
+            1,
+            maxPixelWidth / sourceWidth,
+            maxPixelHeight / sourceHeight
+        )
+        let targetSize = NSSize(
+            width: max(1, floor(sourceWidth * scale)),
+            height: max(1, floor(sourceHeight * scale))
+        )
+
+        let thumbnail = NSImage(size: targetSize)
+        thumbnail.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(
+            in: NSRect(origin: .zero, size: targetSize),
+            from: NSRect(origin: .zero, size: image.size),
+            operation: .copy,
+            fraction: 1
+        )
+        thumbnail.unlockFocus()
+
+        guard let tiffData = thumbnail.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let thumbnailData = bitmap.representation(
+                using: .jpeg,
+                properties: [.compressionFactor: compressionFactor]
+              )
+        else {
+            return nil
+        }
+
+        try FileManager.default.createDirectory(
+            at: outputURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try thumbnailData.write(to: outputURL, options: .atomic)
+        return outputURL
     }
 }

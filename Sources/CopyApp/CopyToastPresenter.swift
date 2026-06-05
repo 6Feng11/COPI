@@ -1,4 +1,5 @@
 import AppKit
+import CopyCore
 import SwiftUI
 
 @MainActor
@@ -6,22 +7,41 @@ final class CopyToastPresenter {
     private var toastPanel: NSPanel?
 
     func show(message: String, near frame: NSRect) {
+        let size = toastSize(for: message)
+        show(
+            message: message,
+            size: size,
+            origin: CopyToastPlacement.nearAnchorOrigin(anchor: frame, size: size)
+        )
+    }
+
+    func show(message: String, centeredOn frame: NSRect) {
+        let size = toastSize(for: message)
+        show(
+            message: message,
+            size: size,
+            origin: CopyToastPlacement.feedbackOrigin(anchor: frame, size: size)
+        )
+    }
+
+    private func show(message: String, size: NSSize, origin: NSPoint) {
         toastPanel?.orderOut(nil)
 
-        let size = NSSize(width: message.count > 3 ? 210 : 118, height: 42)
-        let origin = NSPoint(
-            x: frame.midX - size.width / 2,
-            y: frame.maxY - size.height - 16
-        )
         let panel = NSPanel(
             contentRect: NSRect(origin: origin, size: size),
-            styleMask: [.borderless],
+            styleMask: CopyToastWindowChrome.usesNonActivatingPanel
+                ? [.borderless, .nonactivatingPanel]
+                : [.borderless],
             backing: .buffered,
             defer: false
         )
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
+        panel.hidesOnDeactivate = CopyToastWindowChrome.hidesOnDeactivate
+        panel.ignoresMouseEvents = CopyToastWindowChrome.ignoresMouseEvents
+        panel.isReleasedWhenClosed = CopyToastWindowChrome.isReleasedWhenClosed
+        panel.becomesKeyOnlyIfNeeded = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView: CopyToastView(message: message))
@@ -54,6 +74,10 @@ final class CopyToastPresenter {
             }
         }
     }
+
+    private func toastSize(for message: String) -> NSSize {
+        CopyToastPlacement.feedbackSize(for: message)
+    }
 }
 
 private struct CopyToastView: View {
@@ -63,6 +87,8 @@ private struct CopyToastView: View {
         Text(message)
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.62)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

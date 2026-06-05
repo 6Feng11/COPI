@@ -1,35 +1,18 @@
 import Carbon
+import CopyCore
 import Foundation
 
 @MainActor
 final class GlobalHotKey {
-    enum Command {
-        case commandShiftV
-
-        var keyCode: UInt32 {
-            switch self {
-            case .commandShiftV:
-                return 9
-            }
-        }
-
-        var modifiers: UInt32 {
-            switch self {
-            case .commandShiftV:
-                return UInt32(cmdKey | shiftKey)
-            }
-        }
-    }
-
     private static var activeHotKey: GlobalHotKey?
     private static var eventHandler: EventHandlerRef?
 
-    private let command: Command
+    private var shortcut: KeyboardShortcut
     private let handler: @MainActor () -> Void
     private var hotKeyRef: EventHotKeyRef?
 
-    init(command: Command, handler: @escaping @MainActor () -> Void) {
-        self.command = command
+    init(shortcut: KeyboardShortcut, handler: @escaping @MainActor () -> Void) {
+        self.shortcut = shortcut
         self.handler = handler
     }
 
@@ -40,8 +23,8 @@ final class GlobalHotKey {
         let hotKeyID = EventHotKeyID(signature: fourCharCode("COPY"), id: 1)
         var newHotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
-            command.keyCode,
-            command.modifiers,
+            shortcut.keyCode,
+            carbonModifiers(for: shortcut.modifiers),
             hotKeyID,
             GetEventDispatcherTarget(),
             0,
@@ -61,6 +44,14 @@ final class GlobalHotKey {
             UnregisterEventHotKey(hotKeyRef)
         }
         hotKeyRef = nil
+        if Self.activeHotKey === self {
+            Self.activeHotKey = nil
+        }
+    }
+
+    func update(shortcut: KeyboardShortcut) {
+        self.shortcut = shortcut
+        register()
     }
 
     private static func installEventHandlerIfNeeded() {
@@ -92,5 +83,22 @@ final class GlobalHotKey {
         string.utf8.reduce(0) { partialResult, character in
             (partialResult << 8) + OSType(character)
         }
+    }
+
+    private func carbonModifiers(for modifiers: KeyboardShortcut.Modifiers) -> UInt32 {
+        var carbonModifiers: UInt32 = 0
+        if modifiers.contains(.command) {
+            carbonModifiers |= UInt32(cmdKey)
+        }
+        if modifiers.contains(.shift) {
+            carbonModifiers |= UInt32(shiftKey)
+        }
+        if modifiers.contains(.option) {
+            carbonModifiers |= UInt32(optionKey)
+        }
+        if modifiers.contains(.control) {
+            carbonModifiers |= UInt32(controlKey)
+        }
+        return carbonModifiers
     }
 }
