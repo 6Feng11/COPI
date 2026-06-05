@@ -1,4 +1,8 @@
-# COPI
+<p align="center">
+  <img src="Resources/AppIconSource.jpg" width="120" alt="COPI Logo">
+</p>
+
+<h1 align="center">COPI</h1>
 
 COPI 是一款 Mac 本地剪贴板历史工具。第一版以菜单栏应用形式运行，默认记录用户复制过的文字、链接和图片，并把历史数据保存在本机。
 
